@@ -1,0 +1,74 @@
+{
+  "_comment": "Generated from the Python engine registry. A test in evaluation-engine keeps the two in sync: regenerate with `python evaluation-engine/tests/regen_catalog.py`.",
+  "evaluators": [
+    {
+      "metric": "accuracy",
+      "version": "1.0.0",
+      "description": "Compares the answer with the reference answer: exact match, numeric validation, or semantic similarity (+ optional judge).",
+      "requires": [
+        "referenceAnswer"
+      ],
+      "usesJudge": true
+    },
+    {
+      "metric": "completeness",
+      "version": "1.0.0",
+      "description": "Are all required elements (key facts, steps, fields) present in the answer?",
+      "requires": [
+        "requiredElements"
+      ],
+      "usesJudge": true
+    },
+    {
+      "metric": "groundedness",
+      "version": "1.0.0",
+      "description": "Share of checkable claims that the supplied context / retrieved documents / tool outputs support.",
+      "requires": [
+        "referenceEvidence"
+      ],
+      "usesJudge": true
+    },
+    {
+      "metric": "hallucination",
+      "version": "1.0.0",
+      "description": "Claim-level check: supported / contradicted / unsupported / unverifiable. Score = 1 - (contradicted + w*unsupported)/checked claims.",
+      "requires": [
+        "referenceEvidence",
+        "referenceAnswer"
+      ],
+      "usesJudge": true
+    },
+    {
+      "metric": "instruction_adherence",
+      "version": "1.0.0",
+      "description": "Checks output constraints from the test case: length limits, required / forbidden text, output format.",
+      "requires": [
+        "constraints"
+      ],
+      "usesJudge": false
+    },
+    {
+      "metric": "operational",
+      "version": "1.0.0",
+      "description": "Latency, token consumption, estimated cost and errors, checked against budgets you configure. Prices are never built in - supply config.pricing.",
+      "requires": [],
+      "usesJudge": false
+    },
+    {
+      "metric": "relevance",
+      "version": "1.0.0",
+      "description": "Does the answer address the request? Lexical signals are only reliable at the extremes; enable the judge for a dependable score.",
+      "requires": [],
+      "usesJudge": true
+    },
+    {
+      "metric": "tool_usage",
+      "version": "1.0.0",
+      "description": "Tool selection, parameters, execution results, interpretation of tool output, sequencing and task completion (deterministic).",
+      "requires": [
+        "expectedToolCalls"
+      ],
+      "usesJudge": false
+    }
+  ]
+}

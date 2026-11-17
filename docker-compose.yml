@@ -1,0 +1,93 @@
+# Self-hosted AgentEval: everything runs on your machine/server; no SaaS control plane is contacted.
+# Start:  npm run init:env  &&  docker compose up -d --build
+name: agenteval
+# Hardening applied to every app container: no root, no extra privileges, read-only filesystem (only /tmp is writable).
+x-hardened: &hardened
+  restart: unless-stopped
+  read_only: true
+  tmpfs: ["/tmp"]
+  cap_drop: ["ALL"]
+  security_opt: ["no-new-privileges:true"]
+  logging: { driver: json-file, options: { max-size: "10m", max-file: "5" } }
+
+x-app-env: &app-env
+  NODE_ENV: production
+  PORT: "4000"
+  MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongo:27017/agenteval?authSource=admin
+  JWT_SECRET: ${JWT_SECRET:?run npm run init:env first}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?run npm run init:env first}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+  TRUST_PROXY: "1"
+  TRACE_RETENTION_DAYS: ${TRACE_RETENTION_DAYS:-90}
+  # Keep "false" on any shared/SaaS install. Set "true" only on a private self-hosted install where agents live on your own network.
+  ALLOW_PRIVATE_ENDPOINTS: ${ALLOW_PRIVATE_ENDPOINTS:-false}
+  PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-}
+  # Optional tuning: defaults equal the code defaults, so setting any of these in .env now takes effect inside the containers.
+  ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+  JWT_TTL_SECONDS: ${JWT_TTL_SECONDS:-900}
+  REFRESH_TTL_DAYS: ${REFRESH_TTL_DAYS:-30}
+  LOGIN_MAX_FAILURES: ${LOGIN_MAX_FAILURES:-5}
+  LOGIN_WINDOW_MINUTES: ${LOGIN_WINDOW_MINUTES:-15}
+  LOGIN_LOCK_MINUTES: ${LOGIN_LOCK_MINUTES:-15}
+  INVITE_TTL_DAYS: ${INVITE_TTL_DAYS:-7}
+  RESET_TTL_MINUTES: ${RESET_TTL_MINUTES:-60}
+  AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-10}
+  INGEST_RATE_LIMIT_MAX: ${INGEST_RATE_LIMIT_MAX:-600}
+  MAX_TRACE_BYTES: ${MAX_TRACE_BYTES:-4194304}
+  ROLLUP_RETENTION_DAYS: ${ROLLUP_RETENTION_DAYS:-400}
+  ALERT_RETENTION_DAYS: ${ALERT_RETENTION_DAYS:-365}
+  MAX_ALERT_RULES: ${MAX_ALERT_RULES:-100}
+  PROD_EVAL_MAX_AGE_HOURS: ${PROD_EVAL_MAX_AGE_HOURS:-24}
+  ALERT_TICK_MS: ${ALERT_TICK_MS:-15000}
+  WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+  MAX_CASES_PER_RUN: ${MAX_CASES_PER_RUN:-500}
+  DEFAULT_MAX_JUDGE_CALLS: ${DEFAULT_MAX_JUDGE_CALLS:-200}
+  SDK_RUN_WAIT_MINUTES: ${SDK_RUN_WAIT_MINUTES:-30}
+  AGENT_CALL_TIMEOUT_MS: ${AGENT_CALL_TIMEOUT_MS:-60000}
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?run npm run init:env first}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?run npm run init:env first}
+    volumes: [mongo_data:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  api:
+    <<: *hardened
+    build: ./apps/api
+    environment: *app-env
+    depends_on:
+      mongo: { condition: service_healthy }
+    ports: ["127.0.0.1:${API_PORT:-4000}:4000"]
+  engine:
+    <<: *hardened
+    build: ./evaluation-engine
+    environment:
+      ENGINE_TOKEN: ${ENGINE_TOKEN:?run npm run init:env first}
+      ENGINE_ALLOW_PRIVATE_JUDGE_URLS: ${ALLOW_PRIVATE_ENDPOINTS:-false}
+    # Not published to the host: only the worker can reach it (and it also needs the shared token).
+  worker:
+    <<: *hardened
+    build: ./apps/api
+    command: ["node", "src/worker.js"]
+    environment:
+      <<: *app-env
+      ENGINE_URL: http://engine:8000
+      ENGINE_TOKEN: ${ENGINE_TOKEN:?run npm run init:env first}
+    extra_hosts: ["host.docker.internal:host-gateway"]   # lets the worker reach an agent running on your own computer (needs ALLOW_PRIVATE_ENDPOINTS=true)
+    depends_on:
+      mongo: { condition: service_healthy }
+      engine: { condition: service_healthy }
+  web:
+    <<: *hardened
+    build: ./apps/web
+    depends_on:
+      api: { condition: service_healthy }
+    ports: ["${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:8080"]   # localhost by default; docker-compose.prod.yml puts Caddy (TLS) in front
+volumes: { mongo_data: {} }

@@ -1,0 +1,80 @@
+# Render Blueprint: deploys web + api + worker + engine in one go.
+# Dashboard -> New -> Blueprint -> select this repo. MongoDB is NOT hosted by Render: use MongoDB Atlas
+# and paste the connection string when prompted for MONGODB_URI (api + worker).
+
+envVarGroups:
+  - name: agenteval-shared
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY        # must decode to exactly 32 bytes (base64). Render's generated 256-bit value does.
+        generateValue: true
+      - key: ENGINE_TOKEN
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      - key: ALLOW_PRIVATE_ENDPOINTS
+        value: "false"
+
+services:
+  # 1) API (public, but the browser only reaches it through the web service's /api proxy)
+  - type: web
+    name: agenteval-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    plan: starter
+    healthCheckPath: /api/v1/health
+    envVars:
+      - fromGroup: agenteval-shared
+      - key: PORT
+        value: "4000"
+      - key: MONGODB_URI
+        sync: false                 # prompted once at Blueprint creation
+      - key: TRUST_PROXY
+        value: "2"                  # Render LB -> nginx -> api
+      - key: CORS_ORIGINS
+        sync: false                 # your web URL, e.g. https://agenteval-web.onrender.com (can be set after first deploy)
+      - key: ALLOW_REGISTRATION
+        value: "true"
+
+  # 2) Worker (background job runner, same image as the API)
+  - type: worker
+    name: agenteval-worker
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    dockerCommand: node src/worker.js
+    plan: starter
+    envVars:
+      - fromGroup: agenteval-shared
+      - key: MONGODB_URI
+        sync: false
+      - key: ENGINE_URL
+        value: http://agenteval-engine:8000
+
+  # 3) Evaluation engine (private: only the worker can reach it, and it also needs ENGINE_TOKEN)
+  - type: pserv
+    name: agenteval-engine
+    runtime: docker
+    dockerfilePath: ./evaluation-engine/Dockerfile
+    dockerContext: ./evaluation-engine
+    plan: starter
+    envVars:
+      - fromGroup: agenteval-shared
+      - key: PORT
+        value: "8000"
+      - key: ENGINE_PORT
+        value: "8000"
+
+  # 4) Web (nginx serving the built React app, proxying /api to agenteval-api)
+  - type: web
+    name: agenteval-web
+    runtime: docker
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: ./apps/web
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: "8080"

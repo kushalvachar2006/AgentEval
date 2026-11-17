@@ -1,0 +1,16 @@
+[
+  { "name": "cycle-in-parents", "ops": [{ "path": "spans.0.parentSpanId", "value": "53995c3f42cd8ad8" }], "expectPath": "parentSpanId" },
+  { "name": "orphan-parent", "ops": [{ "path": "spans.2.parentSpanId", "value": "ffffffffffffffff" }], "expectPath": "spans.2.parentSpanId" },
+  { "name": "end-before-start", "ops": [{ "path": "endedAt", "value": "2026-11-04T09:00:00.000Z" }], "expectPath": "endedAt" },
+  { "name": "duplicate-span-id", "ops": [{ "path": "spans.2.spanId", "value": "0102030405060708" }], "expectPath": "spans.2.spanId" },
+  { "name": "bad-trace-id", "ops": [{ "path": "traceId", "value": "nothex" }], "expectPath": "traceId" },
+  { "name": "all-zero-trace-id", "ops": [{ "path": "traceId", "value": "00000000000000000000000000000000" }], "expectPath": "traceId" },
+  { "name": "llm-missing-model", "ops": [{ "path": "spans.2.llm.model", "value": null }], "expectPath": "spans.2.llm.model" },
+  { "name": "tool-empty-name", "ops": [{ "path": "spans.3.tool.name", "value": "" }], "expectPath": "spans.3.tool.name" },
+  { "name": "negative-tokens", "ops": [{ "path": "usage.inputTokens", "value": -1 }], "expectPath": "usage.inputTokens" },
+  { "name": "unknown-status", "ops": [{ "path": "status", "value": "weird" }], "expectPath": "status" },
+  { "name": "missing-agent-id", "ops": [{ "path": "agentId", "delete": true }], "expectPath": "agentId" },
+  { "name": "timestamp-without-timezone", "ops": [{ "path": "startedAt", "value": "2026-11-04T10:00:00" }], "expectPath": "startedAt" },
+  { "name": "error-status-without-error", "ops": [{ "path": "status", "value": "error" }], "expectPath": "error" },
+  { "name": "unsupported-major-version", "ops": [{ "path": "schemaVersion", "value": "2.0" }], "expectPath": "schemaVersion" }
+]

@@ -1,0 +1,18 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	reverse_proxy web:8080 {
+		header_up X-Forwarded-Proto {scheme}
+	}
+	# Brute-force protection beyond the app's own limits: cap request body size at the edge.
+	request_body {
+		max_size 6MB
+	}
+}

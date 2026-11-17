@@ -1,0 +1,50 @@
+# ---- secrets & local config (NEVER commit) ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+backups/
+
+# ---- dependencies & build output ----
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- logs, temp, OS, editors ----
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# ---- other package managers' lockfiles (this repo uses npm; Python uses uv.lock in sdk/python) ----
+pnpm-lock.yaml
+yarn.lock
+
+# ---- local scratch ----
+tmp/
+scratch/
+
+# ---- added: never commit real keys / local test scripts ----
+sdk/python/p1.py
+sdk/python/src/*.egg-info/
+*.zip
+.render/

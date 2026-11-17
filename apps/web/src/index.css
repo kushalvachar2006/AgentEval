@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   Design tokens. Values are "R G B" triplets so Tailwind can apply alpha.
+   Colour is reserved for signal: neutral chrome, one brand accent, and
+   four status hues (success / danger / warning / info).
+------------------------------------------------------------------- */
+:root {
+  /* Palette: charcoal #2A2F35, slate #5B6770, gold #F2C14E, cream #FFF4D6, mist #9AA5B1 */
+  --canvas: 243 245 247;
+  --surface: 255 255 255;
+  --sunken: 237 240 243;
+  --line: 223 228 233;
+  --line-strong: 134 146 159;       /* input borders: 3:1 against white */
+  --ink: 42 47 53;                  /* charcoal */
+  --muted: 91 103 112;              /* slate */
+  --faint: 105 116 127;
+
+  --brand: 242 193 78;              /* gold */
+  --brand-strong: 229 177 54;
+  --brand-soft: 255 244 214;        /* cream */
+  --on-brand: 42 47 53;             /* text on gold */
+  --link: 126 82 0;                 /* deep gold: readable on white and cream */
+
+  --success-fg: 4 120 87;   --success-bg: 232 248 240;  --success-dot: 18 169 118;
+  --danger-fg: 180 35 24;   --danger-bg: 254 240 238;   --danger-dot: 217 45 32;
+  --warning-fg: 154 64 0;   --warning-bg: 255 237 224;  --warning-dot: 224 112 20;
+  --info-fg: 23 92 211;     --info-bg: 237 245 255;     --info-dot: 46 144 250;
+  --danger-solid: 205 38 28;
+
+  --code-bg: 42 47 53;
+  --code-fg: 236 238 241;
+  --hero: 42 47 53;
+  --shadow: 42 47 53;
+
+  /* Chart series: hex strings (read by recharts through useChartTheme) */
+  --chart-1: #d4960a; --chart-2: #5b6770; --chart-3: #0e9f6e; --chart-4: #d92d20;
+  --chart-5: #0e90b5; --chart-6: #8a4fd3; --chart-7: #9aa5b1; --chart-8: #c2307a;
+}
+
+:root[data-theme='dark'] {
+  --canvas: 28 32 37;
+  --surface: 42 47 53;              /* charcoal */
+  --sunken: 51 57 64;
+  --line: 66 74 83;
+  --line-strong: 91 103 112;        /* slate */
+  --ink: 250 246 232;
+  --muted: 154 165 177;             /* mist */
+  --faint: 140 150 161;
+
+  --brand: 242 193 78;
+  --brand-strong: 247 207 105;
+  --brand-soft: 62 55 34;
+  --on-brand: 42 47 53;
+  --link: 242 193 78;
+
+  --success-fg: 52 211 153;  --success-bg: 20 58 48;  --success-dot: 52 211 153;
+  --danger-fg: 252 129 120;  --danger-bg: 72 33 35;   --danger-dot: 248 113 113;
+  --warning-fg: 255 163 90;  --warning-bg: 70 44 26;  --warning-dot: 255 163 90;
+  --info-fg: 120 176 255;    --info-bg: 29 48 82;     --info-dot: 96 165 250;
+  --danger-solid: 199 48 48;
+
+  --code-bg: 22 25 29;
+  --code-fg: 226 230 235;
+  --hero: 22 25 29;
+  --shadow: 0 0 0;
+
+  --chart-1: #f2c14e; --chart-2: #9aa5b1; --chart-3: #34d399; --chart-4: #f87171;
+  --chart-5: #38bdf8; --chart-6: #b794f6; --chart-7: #6f7d8a; --chart-8: #f472b6;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; text-rendering: optimizeLegibility; scroll-padding-top: 1rem; }
+  body { @apply bg-canvas font-sans text-base text-ink antialiased; }
+  h1, h2, h3 { @apply tracking-tight; }
+  code, kbd, samp { @apply font-mono text-[0.92em]; }
+  ::selection { background: rgb(var(--brand) / 0.45); }
+
+  /* One consistent, always-visible keyboard focus ring. Inputs draw their own (see ui.jsx). */
+  :focus-visible { outline: 2px solid rgb(var(--link)); outline-offset: 2px; border-radius: 4px; }
+
+  /* Quiet scrollbars */
+  * { scrollbar-width: thin; scrollbar-color: rgb(var(--line-strong)) transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgb(var(--line-strong)); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+
+  summary { list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+}
+
+/* Decorative effects used by the landing and sign-in pages. All are gold-on-charcoal and purely visual. */
+@layer utilities {
+  .bg-grid {
+    background-image: linear-gradient(rgb(255 244 214 / 0.07) 1px, transparent 1px), linear-gradient(90deg, rgb(255 244 214 / 0.07) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse at 50% 35%, #000 25%, transparent 72%);
+    mask-image: radial-gradient(ellipse at 50% 35%, #000 25%, transparent 72%);
+  }
+  .bg-dots {
+    background-image: radial-gradient(rgb(var(--ink) / 0.16) 1px, transparent 1.2px);
+    background-size: 22px 22px;
+    -webkit-mask-image: radial-gradient(ellipse at 25% 15%, #000, transparent 70%);
+    mask-image: radial-gradient(ellipse at 25% 15%, #000, transparent 70%);
+  }
+  .spotlight { background: radial-gradient(520px circle at var(--mx, 68%) var(--my, 28%), rgb(242 193 78 / 0.16), transparent 65%); }
+  .aurora-gold { background: radial-gradient(closest-side, rgb(242 193 78 / 0.42), transparent); }
+  .aurora-slate { background: radial-gradient(closest-side, rgb(91 103 112 / 0.75), transparent); }
+  .aurora-cream { background: radial-gradient(closest-side, rgb(255 244 214 / 0.18), transparent); }
+  .glow-soft { background: radial-gradient(closest-side, rgb(var(--brand) / 0.30), transparent); }
+  .glow-gold { box-shadow: 0 0 0 1px rgb(242 193 78 / 0.35), 0 10px 34px -8px rgb(242 193 78 / 0.6); transition: box-shadow .25s, background-color .15s; }
+  .glow-gold:hover { box-shadow: 0 0 0 1px rgb(242 193 78 / 0.65), 0 14px 46px -6px rgb(242 193 78 / 0.9); }
+  .btn-shine { position: relative; overflow: hidden; isolation: isolate; }
+  .btn-shine::after {
+    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.6) 50%, transparent 70%);
+    transform: translateX(-130%); animation: btn-shine 3.8s ease-in-out 1.4s infinite;
+  }
+  .glow-card { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+  .glow-card:hover { transform: translateY(-3px); border-color: rgb(var(--brand) / 0.6); box-shadow: 0 18px 44px -18px rgb(242 193 78 / 0.55); }
+}
+@keyframes btn-shine { 0% { transform: translateX(-130%); } 40%, 100% { transform: translateX(130%); } }
+
+/* Respect the user's motion preference everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
