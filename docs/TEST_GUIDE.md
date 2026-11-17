@@ -17,6 +17,7 @@ How to test AgentEval from beginning to end. Four parts, in the order you should
 - [Part B: API smoke test](#part-b-api-smoke-test)
 - [Part C: First-user acceptance walkthrough](#part-c-first-user-acceptance-walkthrough)
 - [Part D: Server, security and load checks](#part-d-server-security-and-load-checks)
+- [Running an evaluation on the deployed site (no local clone)](#running-an-evaluation-on-the-deployed-site-no-local-clone)
 - [Test data and helper scripts](#test-data-and-helper-scripts)
 - [Not built yet (do not report as bugs)](#not-built-yet-do-not-report-as-bugs)
 - [Reporting a failure](#reporting-a-failure)
@@ -28,6 +29,14 @@ How to test AgentEval from beginning to end. Four parts, in the order you should
 1. Set up the project: [SETUP_GUIDE.md](SETUP_GUIDE.md) sections 2-3 (prerequisites, `npm run init:env`).
 2. Install packages once: `npm run install:all` (needed for the API integration tests and the website build).
 3. Parts B-C additionally need the stack running (SETUP_GUIDE section 5). Website: `http://localhost:8080` (Docker) or `http://localhost:5173` (dev mode).
+
+**Testing the deployed site instead of a local install?** You do not need to clone or run anything locally. Wherever this guide says `http://localhost:8080`, use your site address (for example `https://your-site.netlify.app`). Wherever it says `pip install -e sdk/python`, use this instead (Python 3.10+):
+
+```bash
+pip install "agenteval @ git+https://github.com/kushalvachar2006/AgentEval.git#subdirectory=sdk/python"
+```
+
+and set `AGENTEVAL_ENDPOINT` to your **site address** (no `/api/v1` at the end). The example scripts under `sdk/python/examples/` are not installed by pip; download the one you need (see [Test data and helper scripts](#test-data-and-helper-scripts)). The full walkthrough for evaluation runs is in [Running an evaluation on the deployed site](#running-an-evaluation-on-the-deployed-site-no-local-clone).
 
 Terminal variables used below (Windows PowerShell: `$env:NAME="value"` instead of `export NAME=value`): `AGENTEVAL_API_KEY`, `AGENTEVAL_AGENT_ID`, `AGENTEVAL_RUN_ID`, `AGENTEVAL_ENDPOINT`.
 
@@ -156,8 +165,8 @@ Do the sections in order; each builds on the previous one. Sections C1-C4 are th
 1. Open the site → **Create an account**. You land on Agents. The sidebar shows Dashboard; Build: Agents, Test suites, Evaluations; Production: Traces, Monitoring, Alerts; Workspace: Organization, Evaluators.
 2. **New agent**: `laptop-agent`, framework LangChain, connection **Python SDK (runs on my machine)**.
 3. Agent page → **Create API key**, copy it (shown once), confirm.
-4. `pip install -e sdk/python`; export `AGENTEVAL_API_KEY`, `AGENTEVAL_AGENT_ID` (and `AGENTEVAL_ENDPOINT=http://localhost:8080` for Docker).
-5. `python sdk/python/examples/send_test_trace.py` → `accepted: 1`. With `--twice` → 1 accepted, 1 duplicate. With `--fail` → one failed trace (try the *error* filter on Traces).
+4. Install the SDK: local clone `pip install -e sdk/python`, deployed site the `pip install "agenteval @ git+https://github.com/kushalvachar2006/AgentEval.git#subdirectory=sdk/python"` command from *Before you start*. Then export `AGENTEVAL_API_KEY`, `AGENTEVAL_AGENT_ID` and `AGENTEVAL_ENDPOINT` (`http://localhost:8080` for Docker, `http://localhost:4000` in dev mode, your site address when deployed).
+5. Run `send_test_trace.py` (local clone: `python sdk/python/examples/send_test_trace.py`; deployed: download it first with the command in *Test data and helper scripts*, then `python send_test_trace.py`) → `accepted: 1`. With `--twice` → 1 accepted, 1 duplicate. With `--fail` → one failed trace (try the *error* filter on Traces).
 6. Open the trace: the stored input shows the fake secret **redacted** (`[REDACTED]`), not `sk-demo…`.
 
 ### C2. Test suite import (3 min)
@@ -167,8 +176,8 @@ Do the sections in order; each builds on the previous one. Sections C1-C4 are th
 4. Delete a case → it disappears; the case count drops by one.
 
 ### C3. Evaluation, SDK mode (5 min)
-1. **Evaluations** → agent `laptop-agent`, suite `demo-suite`, mode **My own code (Python SDK)** → **Start**. ✅ Run page: 0 of 3, status `awaiting_traces`.
-2. `export AGENTEVAL_RUN_ID=<run id>` then `python sdk/python/examples/evaluation_demo.py` → `Sent 3 of 3 traces. Agent errors: 0`. (The key needs the **evaluation runs** option: create a key with it on the agent page.)
+1. **Evaluations** → agent `laptop-agent`, suite `demo-suite`, mode **My own code (Python SDK)** → **Start**. ✅ Run page: 0 of 3, status `awaiting_traces`, and a box **"Waiting for your agent"** with 4 numbered steps (install, API key, script, run). The commands in that box are already filled in with this site's address and the run id.
+2. Follow those four steps on your computer. To try it with the built-in demo agent instead of your own, follow [Running an evaluation on the deployed site](#running-an-evaluation-on-the-deployed-site-no-local-clone), step 4, option B. Local clone only: `export AGENTEVAL_RUN_ID=<run id>` then `python sdk/python/examples/evaluation_demo.py`. Either way the output is `Sent 3 of 3 traces. Agent errors: 0`. (The key needs the **evaluation runs** option: keys created on the agent page have it.)
 3. ✅ Status `completed`, 3 evaluated, 2 passed, 1 failed (pass rate ≈ 67%). Needs the **worker and engine** running.
 
 ### C4. Reading results (the important part)
@@ -247,7 +256,105 @@ Do on a server (see [SETUP_GUIDE §13](SETUP_GUIDE.md#13-putting-it-on-a-server-
 
 ---
 
+## Running an evaluation on the deployed site (no local clone)
+
+This is the path for someone who only has the website address. Nothing from the project is cloned or built; you need Python 3.10+ and a terminal. Takes about 10 minutes.
+
+**What runs where.** In *My own code (Python SDK)* mode, **your agent runs on your computer**. The SDK downloads the test cases from the site, calls your agent once per case, and sends the recorded traces back. The site's worker and engine then score them. Nothing is scored on your machine.
+
+**Before you begin, the deployment must have** the API, the **worker** and the **engine** running (see [SETUP_GUIDE §13](SETUP_GUIDE.md#13-putting-it-on-a-server-https) or `render.yaml`). If the worker or engine is missing, the run stays at `0 of N` forever.
+
+### Step by step
+
+1. **Create the agent.** *Agents → New agent*, connection **Python SDK (runs on my machine)**.
+2. **Create an API key.** Open the agent, *Create API key*, copy it right away (it is shown once). Keys made on this page already allow trace sending **and** evaluation runs.
+3. **Create a test suite.** *Test suites → New → Import*, or use **Insert a sample** (3 cases).
+4. **Start the run.** *Evaluations → New evaluation*, pick agent and suite, mode **My own code (Python SDK)**, *Start evaluation*. The run page opens with status `awaiting_traces` and the box **"Waiting for your agent"** that contains the commands below, prefilled for this site and this run.
+5. **On your computer** (a virtual environment is recommended: `python -m venv .venv`, then `source .venv/bin/activate`, Windows PowerShell `.venv\Scripts\Activate.ps1`):
+
+   **a. Install the SDK**
+
+   ```bash
+   pip install "agenteval @ git+https://github.com/kushalvachar2006/AgentEval.git#subdirectory=sdk/python"
+   ```
+
+   **b. Save your API key**
+
+   ```bash
+   export AGENTEVAL_API_KEY="ae_live_..."        # macOS / Linux
+   ```
+   ```powershell
+   $env:AGENTEVAL_API_KEY="ae_live_..."          # Windows PowerShell
+   ```
+
+   **c. Run your agent against the run.** Choose **one**:
+
+   *Option A: your own agent.* Save the script from the run page as `run_eval.py`. It looks like this (the run id and site address are filled in for you on the page):
+
+   ```python
+   import os
+   from agenteval import AgentEval
+
+   RUN_ID = "<run id from the run page>"
+   ENDPOINT = "https://your-site.netlify.app"      # the site address, no /api/v1
+
+   def my_agent(question, config):
+       return my_real_agent(question)                              # plain Python agent
+       # LangChain / LangGraph: return graph.invoke({"question": question}, config=config)
+
+   with AgentEval(api_key=os.environ["AGENTEVAL_API_KEY"], endpoint=ENDPOINT, timeout=60) as client:
+       summary = client.run_evaluation(RUN_ID, my_agent)
+       print(f"Sent {summary['sent']} of {summary['total']} traces. Agent errors: {len(summary['agentErrors'])}")
+   ```
+
+   ```bash
+   python run_eval.py
+   ```
+
+   For LangChain or LangGraph also install the extra: `pip install "agenteval[langchain] @ git+https://github.com/kushalvachar2006/AgentEval.git#subdirectory=sdk/python"` (or `[langgraph]`), and **always pass `config=config`** into your chain or graph, otherwise AgentEval cannot see the steps.
+
+   *Option B: the built-in demo agent (no LLM key needed).* Download the demo script and run it:
+
+   ```bash
+   curl -O https://raw.githubusercontent.com/kushalvachar2006/AgentEval/main/sdk/python/examples/evaluation_demo.py                  # Windows PowerShell: iwr https://raw.githubusercontent.com/kushalvachar2006/AgentEval/main/sdk/python/examples/evaluation_demo.py -OutFile evaluation_demo.py
+   export AGENTEVAL_ENDPOINT="https://your-site.netlify.app"
+   export AGENTEVAL_RUN_ID="<run id from the run page>"
+   python evaluation_demo.py
+   ```
+
+   (PowerShell: `$env:AGENTEVAL_ENDPOINT="..."` and `$env:AGENTEVAL_RUN_ID="..."`.)
+
+6. **Watch the result.** The terminal prints `Sent 3 of 3 traces. Agent errors: 0`. The run page updates by itself: `awaiting_traces` → `running` → `completed`, then open a case → **Details**.
+
+### Endpoint mode (nothing to install)
+
+If your agent is a web service with a **public HTTPS address**, create the agent with connection **HTTP endpoint** and start the run in mode *AgentEval calls the agent's HTTP endpoint*. The site calls your agent for every case. A deployed site **cannot reach `localhost` or private addresses** (blocked on purpose, `ALLOW_PRIVATE_ENDPOINTS=false`), so an agent that only runs on your laptop must use the SDK mode above.
+
+### If something goes wrong
+
+| What you see | Cause and fix |
+|---|---|
+| `pip` says it cannot find or clone the repository | The repository must be reachable by you (public, or you are logged in to GitHub). Check `git --version` works; `pip` needs Git installed |
+| `AgentEvalNetworkError` or a timeout on the first call | Free hosting sleeps when idle and needs up to about a minute to wake. Run the script again; the SDK already waits 60 s |
+| `401` / `INVALID_API_KEY` | The key is wrong, revoked or the variable is empty. Check `echo $AGENTEVAL_API_KEY` (PowerShell `$env:AGENTEVAL_API_KEY`) |
+| `403` / permission error on the run | The key was created without **evaluation runs**. Make a new key on the agent page |
+| `404` for the run | Wrong run id, or the key belongs to another organization |
+| "This run is completed and no longer accepts traces" | The run ended or was cancelled. Start a new one and use its new run id |
+| `Sent 3 of 3` but the run stays at 0 evaluated | The **worker** or **engine** is not running on the server (see SETUP_GUIDE §11 troubleshooting) |
+| Cases show `error` | Your function raised an exception (shown in `agentErrors`), or the deadline on the run page passed before traces arrived |
+| `http://` endpoint refused by the SDK | Use the `https://` site address. Plain `http://` is only accepted for localhost |
+
+---
+
 ## Test data and helper scripts
+
+The example scripts live in the repository and are **not installed by `pip`**. On a deployed site, download the one you need (PowerShell: `iwr <url> -OutFile <name>`):
+
+```bash
+curl -O https://raw.githubusercontent.com/kushalvachar2006/AgentEval/main/sdk/python/examples/send_test_trace.py
+curl -O https://raw.githubusercontent.com/kushalvachar2006/AgentEval/main/sdk/python/examples/evaluation_demo.py
+curl -O https://raw.githubusercontent.com/kushalvachar2006/AgentEval/main/sdk/python/examples/generate_demo_data.py
+```
 
 | File | Use |
 |---|---|

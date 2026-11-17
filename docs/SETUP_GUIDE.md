@@ -145,6 +145,18 @@ Expected output: `export stats: {... 'accepted': 1 ...}`. Open **Traces** in the
 
 The SDK refuses plain `http://` endpoints unless the host is `localhost`/`127.0.0.1`/`::1`. API reference and all SDK calls: [API_DOCS.md §14](API_DOCS.md#14-python-sdk-quick-reference).
 
+### Using a deployed site (no local clone)
+
+If AgentEval is already deployed and you only need to connect an agent, skip the clone and the editable install above:
+
+```bash
+pip install "agenteval @ git+https://github.com/kushalvachar2006/AgentEval.git#subdirectory=sdk/python"      # add [langchain] or [langgraph] if needed
+export AGENTEVAL_API_KEY=ae_live_...
+export AGENTEVAL_ENDPOINT=https://your-site.netlify.app          # the site address, no /api/v1
+```
+
+The agent page and the evaluation run page in the website show these commands already filled in. To run an **evaluation** against the deployed site, follow [TEST_GUIDE: Running an evaluation on the deployed site](TEST_GUIDE.md#running-an-evaluation-on-the-deployed-site-no-local-clone). When you host your own copy, set the Netlify variables `VITE_SDK_REPO` (your fork's `.git` URL) and, if the API has a different address from the site, `VITE_API_URL`, so the commands shown in the website use them.
+
 ## 8. Optional: AI judge
 
 Some scores (relevance, semantic accuracy, borderline claims) are more reliable with an LLM judge. Configure it **in the website**: **Evaluators** page → enable, pick provider (`openai_compatible` for OpenAI, Azure-style gateways, vLLM, Ollama, LiteLLM; or `anthropic`), model, optionally base URL, and paste the API key. The key is stored **encrypted per organization**, never in `.env`, and is never shown again. New evaluation runs then offer *Use the AI judge* with a *Max judge calls* cap.

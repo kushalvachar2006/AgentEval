@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, fmtDuration, fmtTime } from '../api.js';
 import { useConfirm, useToast } from '../components/feedback.jsx';
 import { Button, Card, Checkbox, Code, CopyButton, Empty, ErrorBox, Field, Input, Meta, Notice, PageHeader, Pill, RelTime, Select, Skeleton, Table, Tag, cx, linkCls } from '../components/ui.jsx';
+import { apiUrl, installCommand, keyCommand } from '../sdkInfo.js';
 
 function Step({ n, title, children }) {
   return (
@@ -88,17 +89,10 @@ handler = client.${agent.framework === 'langgraph' ? 'langgraph_handler' : 'lang
 result = chain.invoke(inputs, config={"callbacks": [handler]})
 client.flush()`;
   */
-  // Python SDK talks straight to the API server (no CORS involved). Optional Netlify env VITE_API_URL = your Render API URL;
-  // otherwise the site's own origin is used (works through the /api proxy).
-  const apiUrl = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '');
-  // Optional Netlify env VITE_SDK_REPO, e.g. https://github.com/you/agenteval.git
-  const repoUrl = import.meta.env.VITE_SDK_REPO || 'https://github.com/<your-username>/<your-repo>.git';
+  // apiUrl / installCommand / keyCommand come from ../sdkInfo.js (shared with the evaluation-run page).
   const extra = agent.framework === 'langgraph' ? '[langgraph]' : agent.framework === 'langchain' ? '[langchain]' : '';
-  const installCmd = `pip install "agenteval${extra} @ git+${repoUrl}#subdirectory=sdk/python"`;
-  const keyCmd = `# macOS / Linux
-export AGENTEVAL_API_KEY="<PASTE YOUR KEY>"
-# Windows PowerShell
-$env:AGENTEVAL_API_KEY="<PASTE YOUR KEY>"`;
+  const installCmd = installCommand(extra);
+  const keyCmd = keyCommand;
   const head = `import os
 from agenteval import AgentEval
 
@@ -179,7 +173,7 @@ client.flush()`;
             <Step n={2} title="Install the SDK (once, in the environment where your agent runs)">
               <div className="mb-2 flex justify-end"><CopyButton text={installCmd} label="Copy command" /></div>
               <Code wrap>{installCmd}</Code>
-              <p className="mt-2 text-xs text-muted">Python 3.10+. Replace the repository URL with your own GitHub repo that contains the <code>sdk/python</code> folder. Inside a local clone you can instead run <code>pip install -e "sdk/python{extra}"</code>.</p>
+              <p className="mt-2 text-xs text-muted">Python 3.10+. This downloads the SDK straight from GitHub, so you do not need to clone the project. Tip: do it inside a virtual environment (<code>python -m venv .venv</code>).</p>
             </Step>
             <Step n={3} title="Save the API key as an environment variable">
               <Code wrap={false}>{keyCmd}</Code>

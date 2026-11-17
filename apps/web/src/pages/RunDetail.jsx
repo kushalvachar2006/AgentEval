@@ -4,6 +4,7 @@ import Icon from '../components/Icon.jsx';
 import { useConfirm } from '../components/feedback.jsx';
 import { Button, Card, Code, CopyButton, Empty, ErrorBox, Meta, Notice, PageHeader, Pill, SegmentedBar, Select, Skeleton, Stat, StatStrip, Table, Tag, cx, linkCls } from '../components/ui.jsx';
 import { humanize } from '../hooks.js';
+import { apiUrl, installCommand, keyCommand } from '../sdkInfo.js';
 
 const ACTIVE = ['queued', 'awaiting_traces', 'running'];
 const pct = (n) => (n == null ? '—' : `${Math.round(n * 100)}%`);
@@ -96,7 +97,27 @@ export default function RunDetail({ id }) {
 
   if (!run) return error ? <div className="space-y-4"><ErrorBox error={error} /><Button variant="secondary" href="#/runs" icon="arrow-left">Back to evaluations</Button></div> : <div role="status" aria-label="Loading run" className="space-y-4"><Skeleton className="h-16" /><Skeleton className="h-32" /></div>;
   const p = run.progress;
-  const snippet = `export AGENTEVAL_API_KEY=<a key with "evaluation runs" allowed>\nexport AGENTEVAL_RUN_ID=${run.id}\npython sdk/python/examples/evaluation_demo.py`;
+  // Everything below points at THIS deployed site (see ../sdkInfo.js). Nothing needs a local clone of the project.
+  const installCmd = installCommand();
+  const script = `# run_eval.py  (save this file anywhere, then run: python run_eval.py)
+import os
+from agenteval import AgentEval
+
+RUN_ID = "${run.id}"                      # this evaluation run
+ENDPOINT = "${apiUrl}"                    # this AgentEval site
+
+
+def my_agent(question, config):
+    """Called once per test case. Call YOUR agent and return its final answer."""
+    # Plain Python agent:   return my_real_agent(question)
+    # LangChain / LangGraph: return graph.invoke({"question": question}, config=config)   # keep config=config
+    return "TODO: replace this line with a call to your agent"
+
+
+with AgentEval(api_key=os.environ["AGENTEVAL_API_KEY"], endpoint=ENDPOINT, timeout=60) as client:
+    summary = client.run_evaluation(RUN_ID, my_agent)
+    print(f"Sent {summary['sent']} of {summary['total']} traces. Agent errors: {len(summary['agentErrors'])}")
+`;
 
   return (
     <div className="space-y-6">
@@ -121,9 +142,32 @@ export default function RunDetail({ id }) {
           <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-line-strong" />{p.error} error</span>
         </p>
         {run.status === 'awaiting_traces' && p.completed === 0 && (
-          <Notice tone="info" title="Waiting for your agent. Run it on your machine:" className="mt-4">
-            <div className="mt-2"><Code wrap={false}>{snippet}</Code></div>
-            <div className="mt-2 flex flex-wrap items-center gap-3"><CopyButton text={snippet} label="Copy commands" /><span className="text-xs text-muted">Deadline: {fmtTime(run.awaitDeadline)}. Cases without a trace by then are marked as errors.</span></div>
+          <Notice tone="info" title="Waiting for your agent. Run your agent on your own computer, in 4 steps:" className="mt-4">
+            <ol className="mt-3 space-y-5 text-sm">
+              <li>
+                <p className="font-medium">1. Install the AgentEval SDK <span className="font-normal text-muted">(once; Python 3.10+, no project download needed)</span></p>
+                <div className="mt-2"><Code wrap>{installCmd}</Code></div>
+                <div className="mt-2"><CopyButton text={installCmd} label="Copy command" /></div>
+                <p className="mt-1.5 text-xs text-muted">Using LangChain or LangGraph? Run the same command with <code>agenteval[langchain]</code> or <code>agenteval[langgraph]</code> in place of <code>agenteval</code>.</p>
+              </li>
+              <li>
+                <p className="font-medium">2. Put your API key in an environment variable</p>
+                <div className="mt-2"><Code wrap={false}>{keyCommand}</Code></div>
+                <p className="mt-1.5 text-xs text-muted">Use a key that allows <strong>evaluation runs</strong>. Keys created on the agent’s page already do. The key is only shown once when created; make a new one on the <a className={linkCls} href={`#/agents/${run.agentId}`}>agent page</a> if you lost it.</p>
+              </li>
+              <li>
+                <p className="font-medium">3. Save this script as <code>run_eval.py</code> and connect your agent</p>
+                <div className="mt-2"><Code wrap={false}>{script}</Code></div>
+                <div className="mt-2"><CopyButton text={script} label="Copy script" /></div>
+                <p className="mt-1.5 text-xs text-muted">The run id and this site’s address are already filled in. Only the <code>my_agent</code> function needs your code.</p>
+              </li>
+              <li>
+                <p className="font-medium">4. Run it</p>
+                <div className="mt-2"><Code wrap={false}>python run_eval.py</Code></div>
+                <p className="mt-1.5 text-xs text-muted">You should see “Sent {p.total} of {p.total} traces”. This page updates by itself while results arrive. If the site was idle it can take up to a minute to wake up on the first call.</p>
+              </li>
+            </ol>
+            <p className="mt-4 text-xs text-muted">Deadline: {fmtTime(run.awaitDeadline)}. Cases without a trace by then are marked as errors.</p>
           </Notice>
         )}
       </Card>

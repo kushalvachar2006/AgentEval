@@ -84,6 +84,11 @@ export default function RunsPage() {
                 <option value="sdk">My own code (Python SDK)</option>
                 <option value="endpoint" disabled={!endpointOk}>AgentEval calls the agent’s HTTP endpoint{endpointOk ? '' : ' (agent has none)'}</option>
               </Select>
+              <p className="mt-1.5 text-xs text-muted">
+                {form.mode === 'sdk'
+                  ? 'You run your agent with a short Python script on your own computer. The next page shows the exact commands for this site (install, API key, script).'
+                  : 'AgentEval’s server calls your agent’s public HTTPS address once per test case. Nothing to install on your side.'}
+              </p>
             </Field>
             <div className="rounded-lg border border-line p-3.5">
               <Checkbox checked={form.useJudge} disabled={!judge?.enabled} onChange={(e) => setForm({ ...form, useJudge: e.target.checked })}>Use the AI judge for fuzzy checks</Checkbox>
