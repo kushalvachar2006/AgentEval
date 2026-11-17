@@ -167,7 +167,12 @@ export function createMongoRepos() {
       async summary(orgId, suiteId, max) {
         const base = { ...withOrg(orgId), suiteId: oid(suiteId), isDeleted: false };
         const ids = (await TestCase.find(base).select('_id').sort({ position: 1, _id: 1 }).limit(max + 1).lean()).map((d) => String(d._id));
-        const has = async (f) => (await TestCase.countDocuments({ ...base, [f]: { $exists: true, $ne: [] } })) > 0;
+        const has = async (f) => {
+          const nonEmpty = f === 'referenceAnswer'
+            ? { $exists: true, $nin: [null, ''] }   // String field: can't compare to []
+            : { $exists: true, $ne: [] };           // Mixed fields: unchanged
+          return (await TestCase.countDocuments({ ...base, [f]: nonEmpty })) > 0;
+        };
         const [reference, evidence, required, tools, constraints] = await Promise.all(['referenceAnswer', 'referenceEvidence', 'requiredElements', 'expectedToolCalls', 'constraints'].map(has));
         return { ids, flags: { reference, evidence, required, tools, constraints } };
       },
